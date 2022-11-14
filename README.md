@@ -67,6 +67,49 @@ Ada beberapa kriteria yang ingin dibuat oleh Loid dan Franky, yaitu:
 - Client mendapatkan DNS dari WISE dan client dapat terhubung dengan internet melalui DNS tersebut. (5)
 
 ## Solution
+Membuat konfigurasi pada `/etc/dhcp/dhcpd.conf` di node Westalis sebagai berikut :
+```
+subnet 192.218.2.0 netmask 255.255.255.0 {
+}
+subnet 192.218.1.0 netmask 255.255.255.0 {
+    range 192.218.1.50 192.218.1.88;       #solusi soal 3
+    range 192.218.1.120 192.218.1.155;     #solusi soal 3
+    option routers 192.218.1.1;
+    option broadcast-address 192.218.1.255;
+    option domain-name-servers 192.218.2.2;     #solusi soal 5
+    default-lease-time 300;
+    max-lease-time 6900;
+}
+
+subnet 192.218.3.0 netmask 255.255.255.0 {
+    range 192.218.3.10 192.218.3.30;        #solusi soal 4
+    range 192.218.3.60 192.218.3.85;        #solusi soal 4
+    option routers 192.218.3.1;
+    option broadcast-address 192.218.3.255;
+    option domain-name-servers 192.218.2.2;     #solusi soal 5 
+    default-lease-time 600;
+    max-lease-time 6900;
+}
+```
+
+Kemudian konfigurasi pada `/etc/bind/named.conf.options` di node WISE agar client dapat terhubung ke internet (solusi soal 5)
+```
+echo "options {
+        directory \"/var/cache/bind\";
+
+        forwarders {
+                192.168.122.1;
+       };
+
+        allow-query{any;};
+        auth-nxdomain no;    # conform to RFC1035
+        listen-on-v6 { any; };
+}; " > /etc/bind/named.conf.options
+
+service bind9 restart
+```
+
+## Testing
 
 
 ## Soal 6
