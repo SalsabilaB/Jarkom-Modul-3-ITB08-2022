@@ -9,10 +9,58 @@
 
 ## Gambar Topologi
 
-gambar
+![topologi3](https://user-images.githubusercontent.com/90242686/201648721-bfff44d9-692e-42a7-98da-91f7a302f87b.png)
 
 Melakukan konfigurasi untuk setiap node sebagai berikut :
+- Ostania
+```
+auto eth0
+iface eth0 inet dhcp
 
+auto eth1
+iface eth1 inet static
+address 192.218.1.1
+netmask 255.255.255.0
+
+auto eth2
+iface eth2 inet static
+address 192.218.2.1
+netmask 255.255.255.0
+
+auto eth3
+iface eth3 inet static
+address 192.218.3.1
+netmask 255.255.255.0
+```
+- WISE
+```
+auto eth0
+iface eth0 inet static
+address 192.218.2.2
+netmask 255.255.255.0
+gateway 192.218.2.1
+```
+- Berlint
+```
+auto eth0
+iface eth0 inet static
+address 192.218.2.3
+netmask 255.255.255.0
+gateway 192.218.2.1
+```
+- Westalis
+```
+auto eth0
+iface eth0 inet static
+address 192.218.2.4
+netmask 255.255.255.0
+gateway 192.218.2.1
+```
+- SSS, Garden, KemonoPark, NewstonCastle, Eden
+```
+auto eth0
+iface eth0 inet dhcp
+```
 
 ## Soal 1
 Loid bersama Franky berencana membuat peta tersebut dengan kriteria WISE sebagai DNS Server, Westalis sebagai DHCP Server, Berlint sebagai Proxy Server
@@ -57,7 +105,8 @@ service isc-dhcp-relay start
 
 Kemudian mengedit file `/etc/default/isc-dhcp-relay` seperti gambar dibawah ini :
 
-gambarr
+![ss2](https://user-images.githubusercontent.com/90242686/201653082-b9d70c1e-f260-4d5b-a803-4e8bc8fd60c8.png)
+
 
 ## Soal 3,4,5
 Ada beberapa kriteria yang ingin dibuat oleh Loid dan Franky, yaitu:
@@ -110,6 +159,12 @@ service bind9 restart
 ```
 
 ## Testing
+
+![image](https://user-images.githubusercontent.com/90242686/201653890-41d5cf72-64dd-461f-88fe-7d7fb91249df.png)
+
+
+![image](https://user-images.githubusercontent.com/90242686/201653963-a156e5e9-879e-41b3-ab82-b9ebf32bd102.png)
+
 
 
 ## Soal 6
