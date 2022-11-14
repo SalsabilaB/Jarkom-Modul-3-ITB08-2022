@@ -229,3 +229,191 @@ hwaddress ether 36:98:4c:ce:8c:7f
 - IP Eden
 ![testing7](image/soal7/testing7.png)
 
+## Soal 8
+
+ **SSS**, **Garden, dan Eden** digunakan sebagai client **Proxy** agar pertukaran informasi dapat terjamin keamanannya, juga untuk mencegah kebocoran data.
+
+Pada Proxy Server di **Berlint,** Loid berencana untuk mengatur bagaimana Client dapat mengakses internet. Artinya setiap client harus menggunakan Berlint sebagai HTTP & HTTPS proxy. Adapun kriteria pengaturannya adalah sebagai berikut:
+
+---
+
+1. Client hanya dapat mengakses internet diluar (selain) hari & jam kerja (senin-jumat 08.00 - 17.00) dan hari libur (dapat mengakses 24 jam penuh)
+2. Adapun pada hari dan jam kerja sesuai nomor (1), client hanya dapat mengakses domain loid-work.com dan franky-work.com (IP tujuan domain dibebaskan)
+3. Saat akses internet dibuka, client dilarang untuk mengakses web tanpa HTTPS. (Contoh web HTTP: [http://example.com](http://example.com/))
+4. Agar menghemat penggunaan, akses internet dibatasi dengan kecepatan maksimum 128 Kbps pada setiap host (Kbps = kilobit per second; lakukan pengecekan pada tiap host, ketika 2 host akses internet pada saat bersamaan, **keduanya mendapatkan speed maksimal yaitu 128 Kbps**)
+5. Setelah diterapkan, ternyata peraturan nomor (4) mengganggu produktifitas saat hari kerja, dengan demikian pembatasan kecepatan hanya diberlakukan untuk pengaksesan internet pada hari libur
+
+Setelah proxy **Berlint** diatur oleh Loid, dia melakukan pengujian dan mendapatkan hasil sesuai tabel berikut.
+
+| Aksi | Senin (10.00) | Senin (20.00) | Sabtu (10.00) |
+| --- | --- | --- | --- |
+| Akses internet (HTTP) | x | x | x |
+| Akses internet (HTTPS) | x | v | v |
+| Akses loid-work.com dan franky-work.com | v | x | x |
+| Speed limit (128Kbps) | tidak bisa akses | x (speed tidak dibatasi) | v |
+
+x: tidak
+
+v: iya
+
+## Solution
+
+Konfigurasi domain:
+
+Menambahkan konfigurasi domain [*loid-work.com*](http://loid-work.com) dan [*franky-work.com](http://franky-work.com)* di DNS server yaitu WISE
+
+```
+echo "
+zone \"loid-work.com\" {
+        type master;
+        file \"/etc/bind/jarkom/loid-work.com\";
+};
+zone \"franky-work.com\" {
+        type master;
+        file \"/etc/bind/jarkom/franky-work.com\";
+};
+"> /etc/bind/named.conf.local
+```
+
+Kemudian menambahkan domain
+
+```
+echo "
+;
+; BIND data file for local loopback interface
+;
+\$TTL    604800
+@       IN      SOA     franky-work.com. root.franky-work.com. (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@               IN      NS      franky-work.com.
+@               IN      A       192.218.2.2     ; IP WISE
+www             IN      CNAME   franky-work.com.
+" > /etc/bind/jarkom/franky-work.com
+
+echo "
+;
+; BIND data file for local loopback interface
+;
+\$TTL    604800
+@       IN      SOA     loid-work.com. root.loid-work.com. (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@       IN      NS      loid-work.com.
+@       IN      A       192.218.2.2     ; IP WISE
+www     IN      CNAME   loid-work.com.
+" > /etc/bind/jarkom/loid-work.com
+```
+
+Memberikan konfigurasi masing-masing domain
+
+```
+echo '
+<VirtualHost *:80>
+        ServerAdmin webmaster@localhost
+        DocumentRoot /var/www/html
+        ServerName loid-work.com
+ 
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+' > /etc/apache2/sites-available/loid-work.com.conf
+
+echo '
+<VirtualHost *:80>
+        ServerAdmin webmaster@localhost
+        DocumentRoot /var/www/html
+        ServerName franky-work.com
+ 
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+' > /etc/apache2/sites-available/franky-work.com.conf
+```
+
+Menambahkan konfigurasi web agar dicek melalui client proxy dengan lynx
+
+Konfigurasi Proxy:
+
+1. Membatasi akses client dengan hanya bisa mengakses internet pada diluar jam kerja yaitu senin sampai jumat jam 08.00 sampai 17.00 
+
+Mendeklarasikan waktu kerja dan di luar kerja, lalu memberikan hak akses diluar jam kerja
+    
+```
+    acl WORKTIME time MTWHF 08:00-17:00
+    acl WEEKEND time SA 00:00-23:59
+```
+    
+```
+    http_access allow !WORKTIME
+    http_access deny all
+```
+    
+2. Hanya bisa mengakses domain kerja (**loid-work.com & franky-work.com**) pada saat jam kerja
+
+Mendeklarasikan sejumlah domain kerja dan memberikan hak akses pada saat jam kerja
+    
+```
+    echo '
+    loid-work.com
+    franky-work.com
+    ' > /etc/squid/work-sites.acl
+    
+    acl WORKSITE dstdomain "/etc/squid/working-sites.acl"
+ ```
+    
+ ```
+    http_access allow WORKSITE WORKTIME
+ ```
+    
+3. Hanya memperbolehkan HTTPS (tidak boleh melalui HTTP)
+
+Karena port HTTPS adalah 443, maka kita deklarasikan portnya lalu melarang semua akses yang tidak melewati port 443 
+    
+```
+    acl GOODPORT port 443
+    acl CONNECT method CONNECT
+```
+    
+```
+    http_access deny !GOODPORT
+    http_access deny CONNECT !GOODPORT
+```
+    
+4. Pembatasan kecepatan internet menjadi 128Kbps
+
+Mengubah parameter internet menjadi 16000/16000 untuk membatasi kecepatan internet menjadi 128Kbps
+    
+```
+    delay_pools 1
+    delay_class 1 1
+    delay_parameters 1 16000/16000
+ ```
+    
+5. Pembatasan dilakukan hanya pada saat hari sabtu dan minggu
+
+Menambahkan konfigurasi bandwidth 
+```
+    delay_pools 1
+    delay_class 1 1
+    delay_access 1 allow WEEKEND_TIME
+    delay_parameters 1 16000/16000
+```
+    
+## Testing 
+Berhasil mengakses
+
+![berhasil](https://user-images.githubusercontent.com/90242686/201681432-e5751da4-331a-4b14-9441-b66dff954e07.png)
+
+Gagal mengakses
+
+![gagal](https://user-images.githubusercontent.com/90242686/201681455-509a9f87-e877-431a-a8ea-0bbd92a91ed3.png)
+
